@@ -1,66 +1,57 @@
 {% extends 'base.html' %}
 
-{% block title %}Accueil — CVManager{% endblock %}
+{% block title %}Accueil — Réseau de Talents{% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
-<section class="relative overflow-hidden py-20 lg:py-32">
-    <!-- Background Decor -->
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full -z-10">
-        <div
-            class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-500/10 blur-[120px] rounded-full animate-pulse-soft">
-        </div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent-500/10 blur-[120px] rounded-full animate-pulse-soft"
-            style="animation-delay: 2s;"></div>
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden bg-surface-950">
+    <!-- Professional Video Background -->
+    <div class="absolute inset-0 z-0 pointer-events-none">
+        <video autoplay muted loop playsinline
+            class="absolute inset-0 w-full h-full object-cover opacity-90 scale-105 animate-slow-zoom">
+            <source src="{{ url_for('static', filename='hero-bg.mp4') }}" type="video/mp4">
+        </video>
+        <!-- Light Overlay (just enough for text readability) -->
+        <div class="absolute inset-0 bg-surface-950/30"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-surface-950/80"></div>
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <!-- Hero Content (no frame) -->
+    <div class="relative z-10 max-w-5xl mx-auto px-4 text-center animate-fade-in-up">
         <div
-            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-brand-300 mb-8 animate-fade-in">
+            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-xs font-semibold text-brand-300 mb-8 backdrop-blur-md">
             <span class="relative flex h-2 w-2">
                 <span
                     class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
             </span>
-            Nouvelle version 2.0 disponible
+            Plateforme de Recrutement Nouvelle Génération
         </div>
 
-        <h1 class="text-5xl lg:text-7xl font-display font-extrabold tracking-tight mb-8 animate-slide-up">
-            Gérez vos talents avec <br />
+        <h1 class="text-5xl lg:text-7xl font-display font-extrabold tracking-tight mb-8 leading-[1.1] drop-shadow-2xl">
+            Rejoignez notre réseau de <br />
             <span
-                class="bg-gradient-to-r from-brand-400 via-accent-400 to-brand-400 bg-[length:200%_auto] animate-gradient bg-clip-text text-transparent">Intelligence</span>
+                class="bg-gradient-to-r from-brand-400 via-accent-400 to-emerald-400 bg-[length:200%_auto] animate-gradient bg-clip-text text-transparent italic">Talents
+                d'Exception</span>
         </h1>
 
-        <p class="max-w-2xl mx-auto text-lg lg:text-xl text-surface-400 leading-relaxed mb-12 animate-slide-up"
-            style="animation-delay: 0.1s;">
-            Une plateforme moderne pour importer, analyser et rechercher vos CV en un clin d'œil. Utilisez la puissance
-            du Full-Text Search pour trouver les profils idéaux.
+        <p class="max-w-2xl mx-auto text-lg lg:text-xl text-white/80 leading-relaxed mb-12 drop-shadow-lg">
+            Nous bâtissons l'avenir de la technologie grâce à un réseau international d'experts.
+            Soyez prêt pour votre prochaine mission stratégique.
         </p>
 
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up"
-            style="animation-delay: 0.2s;">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-6">
             <a href="{{ url_for('upload') }}"
-                class="group relative px-8 py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl font-bold transition-all duration-300 shadow-lg shadow-brand-600/25 hover:shadow-brand-600/40 hover:-translate-y-1">
-                <span class="flex items-center gap-2">
-                    Déposer un CV
-                    <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none"
+                class="group relative px-10 py-5 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl font-bold transition-all duration-300 shadow-2xl shadow-brand-600/40 hover:-translate-y-1 hover:scale-105">
+                <span class="flex items-center gap-3">
+                    Soumettre mon profil
+                    <svg class="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                 </span>
             </a>
-            {% if session.logged_in %}
-            <a href="{{ url_for('dashboard') }}"
-                class="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-2xl font-bold transition-all duration-300 backdrop-blur-sm">
-                Tableau de bord
-            </a>
-            {% else %}
-            <a href="{{ url_for('login') }}"
-                class="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-2xl font-bold transition-all duration-300 backdrop-blur-sm">
-                Espace Admin
-            </a>
-            {% endif %}
         </div>
     </div>
 </section>
@@ -68,58 +59,99 @@
 <!-- Stats Section -->
 <section class="py-20 bg-surface-900/50 border-y border-white/5">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            <div class="text-center p-6 rounded-3xl bg-white/5 border border-white/5 animate-scale-in">
-                <div class="text-4xl font-display font-bold text-white mb-2">{{ stats.total }}</div>
-                <div class="text-sm font-medium text-surface-400 uppercase tracking-wider">CV Total</div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+
+            <!-- Stat 1: Profils -->
+            <div
+                class="group text-center p-8 rounded-3xl bg-white/[0.03] border border-white/5 hover:border-brand-500/30 hover:bg-brand-500/[0.05] transition-all duration-500">
+                <div
+                    class="w-14 h-14 mx-auto mb-5 rounded-2xl bg-brand-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-7 h-7 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <div
+                    class="text-4xl font-display font-extrabold bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent mb-1">
+                    5K+</div>
+                <div class="text-sm font-medium text-surface-400">Profils analysés</div>
             </div>
-            <div class="text-center p-6 rounded-3xl bg-white/5 border border-white/5 animate-scale-in"
-                style="animation-delay: 0.1s;">
-                <div class="text-4xl font-display font-bold text-brand-400 mb-2">{{ stats.today }}</div>
-                <div class="text-sm font-medium text-surface-400 uppercase tracking-wider">Aujourd'hui</div>
+
+            <!-- Stat 2: Taux de matching -->
+            <div
+                class="group text-center p-8 rounded-3xl bg-white/[0.03] border border-white/5 hover:border-accent-500/30 hover:bg-accent-500/[0.05] transition-all duration-500">
+                <div
+                    class="w-14 h-14 mx-auto mb-5 rounded-2xl bg-accent-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-7 h-7 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                </div>
+                <div
+                    class="text-4xl font-display font-extrabold bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent mb-1">
+                    95%</div>
+                <div class="text-sm font-medium text-surface-400">Taux de matching</div>
             </div>
-            <div class="text-center p-6 rounded-3xl bg-white/5 border border-white/5 animate-scale-in"
-                style="animation-delay: 0.2s;">
-                <div class="text-4xl font-display font-bold text-accent-400 mb-2">{{ stats.files }}</div>
-                <div class="text-sm font-medium text-surface-400 uppercase tracking-wider">Fichiers PDF/TXT</div>
+
+            <!-- Stat 3: Secteurs -->
+            <div
+                class="group text-center p-8 rounded-3xl bg-white/[0.03] border border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/[0.05] transition-all duration-500">
+                <div
+                    class="w-14 h-14 mx-auto mb-5 rounded-2xl bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                </div>
+                <div
+                    class="text-4xl font-display font-extrabold bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent mb-1">
+                    12+</div>
+                <div class="text-sm font-medium text-surface-400">Secteurs couverts</div>
             </div>
-            <div class="text-center p-6 rounded-3xl bg-white/5 border border-white/5 animate-scale-in"
-                style="animation-delay: 0.3s;">
-                <div class="text-4xl font-display font-bold text-white mb-2">{{ stats.urls }}</div>
-                <div class="text-sm font-medium text-surface-400 uppercase tracking-wider">Sources URL</div>
+
+            <!-- Stat 4: Temps de réponse -->
+            <div
+                class="group text-center p-8 rounded-3xl bg-white/[0.03] border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/[0.05] transition-all duration-500">
+                <div
+                    class="w-14 h-14 mx-auto mb-5 rounded-2xl bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <svg class="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <div
+                    class="text-4xl font-display font-extrabold bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent mb-1">
+                    &lt;48h</div>
+                <div class="text-sm font-medium text-surface-400">Temps de réponse</div>
             </div>
+
         </div>
     </div>
 </section>
 
-<!-- Features Section -->
-<section class="py-24">
+<!-- Why Section -->
+<section class="py-24 relative">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
-            <h2 class="text-3xl lg:text-4xl font-display font-bold text-white mb-4">Pourquoi choisir CVManager ?</h2>
-            <p class="text-surface-400 max-w-2xl mx-auto">Des fonctionnalités pensées pour les recruteurs modernes et
-                les équipes RH exigeantes.</p>
+            <h2 class="text-3xl lg:text-4xl font-display font-bold text-white mb-4">Pourquoi nous rejoindre ?</h2>
+            <p class="text-surface-400 max-w-2xl mx-auto">Un écosystème conçu pour l'impact et la flexibilité
+                professionnelle.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <!-- Feature 1 -->
             <div
                 class="group p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-brand-500/50 transition-all duration-300">
                 <div
                     class="w-14 h-14 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-400 mb-6 group-hover:scale-110 transition-transform">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
-                <h3 class="text-xl font-bold text-white mb-3">Recherche FTS5</h3>
-                <p class="text-surface-400 leading-relaxed text-sm">
-                    Recherchez des mots-clés, des compétences ou des expériences dans des milliers de CV instantanément
-                    grâce à notre moteur de recherche optimisé.
-                </p>
+                <h3 class="text-xl font-bold text-white mb-3">Missions à fort impact</h3>
+                <p class="text-surface-400 text-sm leading-relaxed">Travaillez sur des projets complexes pour des
+                    clients majeurs dans divers secteurs technologiques et industriels.</p>
             </div>
-
-            <!-- Feature 2 -->
             <div
                 class="group p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-accent-500/50 transition-all duration-300">
                 <div
@@ -129,27 +161,105 @@
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                 </div>
-                <h3 class="text-xl font-bold text-white mb-3">Analyse Automatique</h3>
-                <p class="text-surface-400 leading-relaxed text-sm">
-                    Extraction intelligente des emails, téléphones et compétences clés dès l'importation de vos fichiers
-                    PDF ou textes.
-                </p>
+                <h3 class="text-xl font-bold text-white mb-3">Modèle d'engagement flexible</h3>
+                <p class="text-surface-400 text-sm leading-relaxed">Nous proposons différents modes de collaboration
+                    adaptés à votre situation professionnelle et vos objectifs.</p>
             </div>
-
-            <!-- Feature 3 -->
             <div
                 class="group p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-emerald-500/50 transition-all duration-300">
                 <div
                     class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
-                <h3 class="text-xl font-bold text-white mb-3">Sécurisé & Privé</h3>
-                <p class="text-surface-400 leading-relaxed text-sm">
-                    Vos données vous appartiennent. Stockage local sécurisé conforme aux standards de confidentialité
-                    modernes.
+                <h3 class="text-xl font-bold text-white mb-3">Matching intelligent</h3>
+                <p class="text-surface-400 text-sm leading-relaxed">Notre plateforme identifie rapidement les
+                    opportunités qui correspondent précisément à vos compétences.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Tracks Section -->
+<section class="py-24 bg-surface-900/30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl lg:text-4xl font-display font-bold text-white mb-4">Domaines d'expertise
+            </h2>
+            <p class="text-surface-400 max-w-2xl mx-auto">Nous recherchons des profils experts dans divers domaines
+                technologiques.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="p-8 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
+                <h3 class="text-xl font-bold text-brand-400 mb-4">Cybersécurité</h3>
+                <p class="text-surface-400 text-sm mb-6">Gouvernance, audit, SecOps et protection des infrastructures
+                    critiques.</p>
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-2 text-xs text-surface-300"><span
+                            class="w-1.5 h-1.5 rounded-full bg-brand-500"></span> Audit & Compliance</li>
+                    <li class="flex items-center gap-2 text-xs text-surface-300"><span
+                            class="w-1.5 h-1.5 rounded-full bg-brand-500"></span> SecOps & SOC</li>
+                </ul>
+            </div>
+            <div class="p-8 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
+                <h3 class="text-xl font-bold text-accent-400 mb-4">Cloud & DevOps</h3>
+                <p class="text-surface-400 text-sm mb-6">Architecture cloud, automatisation et déploiement
+                    d'applications scalables.</p>
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-2 text-xs text-surface-300"><span
+                            class="w-1.5 h-1.5 rounded-full bg-accent-500"></span> AWS / Azure / GCP</li>
+                    <li class="flex items-center gap-2 text-xs text-surface-300"><span
+                            class="w-1.5 h-1.5 rounded-full bg-accent-500"></span> CI/CD & Kubernetes</li>
+                </ul>
+            </div>
+            <div class="p-8 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
+                <h3 class="text-xl font-bold text-emerald-400 mb-4">Transformation Digitale</h3>
+                <p class="text-surface-400 text-sm mb-6">Modernisation stratégique de l'IT et pilotage du changement
+                    organisationnel.</p>
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-2 text-xs text-surface-300"><span
+                            class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Management de Projet</li>
+                    <li class="flex items-center gap-2 text-xs text-surface-300"><span
+                            class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Stratégie IT</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Process Section -->
+<section class="py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl lg:text-4xl font-display font-bold text-white mb-4">Comment ça marche ?</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
+            <div class="absolute top-1/2 left-0 w-full h-0.5 bg-white/5 -translate-y-1/2 hidden md:block"></div>
+
+            <div class="relative z-10 text-center">
+                <div
+                    class="w-12 h-12 rounded-full bg-brand-600 text-white font-bold flex items-center justify-center mx-auto mb-6 shadow-xl shadow-brand-600/20">
+                    1</div>
+                <h4 class="font-bold text-white mb-2">Soumettez votre profil</h4>
+                <p class="text-surface-400 text-sm">Analysez ou déposez votre CV directement sur la plateforme.</p>
+            </div>
+            <div class="relative z-10 text-center">
+                <div
+                    class="w-12 h-12 rounded-full bg-brand-600 text-white font-bold flex items-center justify-center mx-auto mb-6 shadow-xl shadow-brand-600/20">
+                    2</div>
+                <h4 class="font-bold text-white mb-2">Analyse intelligente</h4>
+                <p class="text-surface-400 text-sm">Le système extrait vos compétences clés et votre expérience.</p>
+            </div>
+            <div class="relative z-10 text-center">
+                <div
+                    class="w-12 h-12 rounded-full bg-brand-600 text-white font-bold flex items-center justify-center mx-auto mb-6 shadow-xl shadow-brand-600/20">
+                    3</div>
+                <h4 class="font-bold text-white mb-2">Matching direct</h4>
+                <p class="text-surface-400 text-sm">Nous vous contactons dès qu'une mission correspond à votre profil.
                 </p>
             </div>
         </div>
@@ -157,6 +267,73 @@
 </section>
 
 <style>
+    /* Premium Mesh Gradient Animation */
+    .mesh-gradient {
+        position: absolute;
+        inset: 0;
+        background-color: #020617;
+        background-image:
+            radial-gradient(at 0% 0%, hsla(225, 39%, 30%, 0.4) 0, transparent 50%),
+            radial-gradient(at 50% 0%, hsla(253, 56%, 20%, 0.4) 0, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(280, 49%, 30%, 0.4) 0, transparent 50%),
+            radial-gradient(at 50% 50%, hsla(225, 39%, 20%, 0.2) 0, transparent 80%);
+        filter: blur(60px);
+        animation: mesh-animate 15s ease-in-out infinite alternate;
+        transform-origin: center;
+    }
+
+    @keyframes mesh-animate {
+        0% {
+            transform: scale(1) translate(0, 0);
+        }
+
+        33% {
+            transform: scale(1.1) translate(2%, 3%);
+        }
+
+        66% {
+            transform: scale(0.9) translate(-2%, 2%);
+        }
+
+        100% {
+            transform: scale(1.05) translate(1%, -2%);
+        }
+    }
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translateY(0) scale(1);
+        }
+
+        50% {
+            transform: translateY(-30px) scale(1.1);
+        }
+    }
+
+    @keyframes pulse-soft {
+
+        0%,
+        100% {
+            opacity: 0.8;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+    }
+
+    .animate-float {
+        animation: float 10s ease-in-out infinite;
+    }
+
+    .animate-pulse-soft {
+        animation: pulse-soft 6s ease-in-out infinite;
+    }
+
     @keyframes gradient {
         0% {
             background-position: 0% 50%;
@@ -173,6 +350,36 @@
 
     .animate-gradient {
         animation: gradient 6s linear infinite;
+    }
+
+    @keyframes slow-zoom {
+        0% {
+            transform: scale(1.05);
+        }
+
+        100% {
+            transform: scale(1.15);
+        }
+    }
+
+    .animate-slow-zoom {
+        animation: slow-zoom 20s linear infinite alternate;
+    }
+
+    @keyframes fade-in-up {
+        0% {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fade-in-up 1s ease-out forwards;
     }
 </style>
 {% endblock %}

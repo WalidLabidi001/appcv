@@ -245,11 +245,12 @@ def parse_cv_metadata(text):
             'feb': 2, 'apr': 4, 'jun': 6, 'aug': 8
         }
         
-        # Comprehensive academic filters
+        # Comprehensive academic and non-professional filters
         academic_keywords = [
             'université', 'university', 'master', 'licence', 'bachelor', 'baccalauréat', 'bac ', 'bac+',
             'diplôme', 'école', 'school', 'formation', 'étudiant', 'student', 'enseignement', 'degree',
-            'cursus', 'académique', 'education', 'enseignement', 'msc ', 'phd', 'doctorat'
+            'cursus', 'académique', 'education', 'msc ', 'phd', 'doctorat', 'professeur', 'professor',
+            'enseignant', 'assistant', 'lecturer', 'stage', 'internship', 'trainee', 'apprenti'
         ]
         
         month_regex = r'(?:janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre|january|february|march|april|may|june|july|august|september|october|november|december|janv?|f[eé]vr?|mar|apr|jun|jul|aug|sep|oct|nov|d[eé]c)'
