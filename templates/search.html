@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}Rechercher — CVManager{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-12">
+    <!-- Search Header -->
+    <div class="mb-12 text-center">
+        <h1 class="text-4xl font-display font-extrabold text-white mb-4">Moteur de Recherche</h1>
+        <p class="text-surface-400">Trouvez des talents en utilisant des mots-clés, des compétences ou des intitulés de
+            poste.</p>
+    </div>
+
+    <!-- Search Bar -->
+    <form action="{{ url_for('search') }}" method="GET" class="relative max-w-3xl mx-auto mb-16 group">
+        <div
+            class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-accent-500 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition duration-500">
+        </div>
+        <div
+            class="relative flex items-center bg-surface-900 border border-white/10 rounded-3xl p-2 focus-within:border-brand-500/50 transition-all duration-300">
+            <div class="pl-4 text-surface-500">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+            <input type="text" name="q" value="{{ query }}" placeholder="Ex: Python, Django, 5 ans d'expérience..."
+                class="w-full bg-transparent border-none focus:ring-0 text-lg px-4 py-3 text-white placeholder-surface-600"
+                autocomplete="off" id="search-input">
+
+            <!-- Voice Search Button -->
+            <button type="button" id="voice-search-btn"
+                class="p-3 text-surface-500 hover:text-brand-400 transition-colors" title="Recherche vocale">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+            </button>
+
+            <button type="submit"
+                class="bg-brand-600 hover:bg-brand-500 text-white px-8 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-brand-600/20">
+                Chercher
+            </button>
+        </div>
+
+        <!-- Suggestions/Quick Links -->
+        <div class="flex flex-wrap items-center gap-2 mt-4 px-2">
+            <span class="text-xs font-semibold text-surface-500 uppercase tracking-widest mr-2">Suggestions :</span>
+            <a href="{{ url_for('search', q='Python') }}"
+                class="text-xs bg-white/5 hover:bg-white/10 border border-white/5 px-3 py-1.5 rounded-full text-surface-300 transition-colors">Python</a>
+            <a href="{{ url_for('search', q='JavaScript') }}"
+                class="text-xs bg-white/5 hover:bg-white/10 border border-white/5 px-3 py-1.5 rounded-full text-surface-300 transition-colors">JavaScript</a>
+            <a href="{{ url_for('search', q='Project Manager') }}"
+                class="text-xs bg-white/5 hover:bg-white/10 border border-white/5 px-3 py-1.5 rounded-full text-surface-300 transition-colors">Chef
+                de projet</a>
+            <a href="{{ url_for('search', q='Développeur Fullstack') }}"
+                class="text-xs bg-white/5 hover:bg-white/10 border border-white/5 px-3 py-1.5 rounded-full text-surface-300 transition-colors">Fullstack</a>
+        </div>
+    </form>
+
+    <!-- Results -->
+    {% if query %}
+    <div class="space-y-8">
+        <div class="flex items-center justify-between border-b border-white/5 pb-6">
+            <h2 class="text-xl font-bold text-white">
+                {{ total }} résultat{{ 's' if total > 1 else '' }} pour <span class="text-brand-400">"{{ query
+                    }}"</span>
+            </h2>
+            <div class="text-sm text-surface-500">Page {{ page }} sur {{ total_pages }}</div>
+        </div>
+
+        {% if results %}
+        <div class="grid grid-cols-1 gap-6">
+            {% for cv in results %}
+            <div class="group relative bg-surface-900/50 border border-white/5 hover:border-brand-500/30 rounded-3xl p-6 transition-all duration-300 animate-slide-up"
+                style="animation-delay: {{ loop.index0 * 0.05 }}s">
+                <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-400">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white group-hover:text-brand-300 transition-colors">{{
+                                    cv.original_filename }}</h3>
+                                <p class="text-xs text-surface-500">Ajouté le {{ cv.created_at|format_date }}</p>
+                            </div>
+                        </div>
+
+                        <div class="prose prose-invert prose-sm max-w-none text-surface-400 leading-relaxed mb-6">
+                            {{ cv.highlighted_text|safe }}
+                        </div>
+
+                        {% set meta = cv.metadata_json|from_json %}
+                        {% if meta.skills %}
+                        <div class="flex flex-wrap gap-2">
+                            {% for skill in meta.skills[:8] %}
+                            <span
+                                class="px-2.5 py-1 bg-brand-500/10 border border-brand-500/20 text-brand-300 text-[10px] font-bold uppercase tracking-wider rounded-lg">{{
+                                skill }}</span>
+                            {% endfor %}
+                            {% if meta.skills|length > 8 %}
+                            <span
+                                class="px-2.5 py-1 bg-surface-800 text-surface-400 text-[10px] font-bold uppercase tracking-wider rounded-lg">+{{
+                                meta.skills|length - 8 }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex flex-row md:flex-col gap-3">
+                        <a href="{{ url_for('view_cv', cv_id=cv.id) }}"
+                            class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-bold rounded-xl transition-all">
+                            Voir les détails
+                        </a>
+                        {% if cv.file_type == 'file' %}
+                        <a href="{{ url_for('download_cv', cv_id=cv.id) }}"
+                            class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-600/10 hover:bg-brand-600/20 text-brand-400 text-sm font-bold rounded-xl transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4-4v12" />
+                            </svg>
+                            Télécharger
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="flex justify-center gap-2 pt-12">
+            {% for p in range(1, total_pages + 1) %}
+            <a href="{{ url_for('search', q=query, page=p) }}"
+                class="w-10 h-10 flex items-center justify-center rounded-xl font-bold transition-all
+                               {% if p == page %}bg-brand-600 text-white shadow-lg shadow-brand-600/20{% else %}bg-surface-900 border border-white/10 text-surface-400 hover:text-white hover:border-white/25{% endif %}">
+                {{ p }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-20 bg-surface-900/30 border border-white/5 border-dashed rounded-[3rem]">
+            <div
+                class="w-20 h-20 bg-surface-800 rounded-full flex items-center justify-center mx-auto mb-6 text-surface-600">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9.172 9.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 14a4 4 0 00-5.656 0" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Aucun résultat trouvé</h3>
+            <p class="text-surface-500">Essayez avec d'autres mots-clés ou vérifiez l'orthographe.</p>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <!-- Placeholder/Empty State -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
+        <div class="p-8 rounded-[2rem] bg-gradient-to-br from-brand-500/10 to-transparent border border-brand-500/20">
+            <div class="w-12 h-12 rounded-xl bg-brand-500/20 flex items-center justify-center text-brand-400 mb-6">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Vitesse Éclair</h3>
+            <p class="text-sm text-surface-400">Recherchez dans des milliers de documents en quelques millisecondes.</p>
+        </div>
+        <div class="p-8 rounded-[2rem] bg-gradient-to-br from-accent-500/10 to-transparent border border-accent-500/20">
+            <div class="w-12 h-12 rounded-xl bg-accent-500/20 flex items-center justify-center text-accent-400 mb-6">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Surlignage Contextuel</h3>
+            <p class="text-sm text-surface-400">Voyez exactement où vos mots-clés apparaissent dans le texte du CV.</p>
+        </div>
+        <div
+            class="p-8 rounded-[2rem] bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 mb-6">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Métadonnées Riches</h3>
+            <p class="text-sm text-surface-400">Extractions automatiques des compétences pour un filtrage efficace.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const voiceBtn = document.getElementById('voice-search-btn');
+        const searchInput = document.getElementById('search-input');
+        const searchForm = searchInput ? searchInput.closest('form') : null;
+
+        if (voiceBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+
+            recognition.lang = 'fr-FR';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            voiceBtn.addEventListener('click', () => {
+                recognition.start();
+                voiceBtn.classList.add('text-brand-400', 'animate-pulse');
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                searchInput.value = transcript;
+                if (searchForm) searchForm.submit();
+            };
+
+            recognition.onspeechend = () => {
+                recognition.stop();
+                voiceBtn.classList.remove('text-brand-400', 'animate-pulse');
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                voiceBtn.classList.remove('text-brand-400', 'animate-pulse');
+            };
+        } else if (voiceBtn) {
+            voiceBtn.style.display = 'none';
+            console.log('Speech recognition not supported in this browser.');
+        }
+    });
+</script>
+{% endblock %}

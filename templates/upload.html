@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Importer un CV — CVManager{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+    <div class="mb-10 text-center">
+        <h1 class="text-4xl font-display font-extrabold text-white mb-4">Importer des CV</h1>
+        <p class="text-surface-400">Ajoutez de nouveaux profils à votre base de données via un fichier ou une URL.</p>
+    </div>
+
+    <!-- Upload Selection Tabs -->
+    <div class="flex p-1.5 bg-surface-900 border border-white/10 rounded-2xl mb-8">
+        <button onclick="switchTab('file')" id="tab-file"
+            class="flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 bg-brand-600 text-white shadow-lg shadow-brand-600/20">
+            Fichier PDF / DOCX / TXT
+        </button>
+        <button onclick="switchTab('url')" id="tab-url"
+            class="flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 text-surface-400 hover:text-white">
+            Lien URL
+        </button>
+    </div>
+
+    <!-- File Upload Form -->
+    <form id="form-file" action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data"
+        class="space-y-6 animate-fade-in">
+        <input type="hidden" name="upload_type" value="file">
+
+        <div id="drop-zone" class="relative group">
+            <div
+                class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-accent-500 rounded-[2rem] blur opacity-10 group-hover:opacity-20 transition duration-1000">
+            </div>
+            <div
+                class="relative border-2 border-dashed border-white/10 group-hover:border-brand-500/50 bg-surface-900/50 rounded- [2rem] p-12 text-center transition-all duration-300">
+                <input type="file" id="cv_file" name="cv_file" class="hidden" accept=".pdf,.docx,.txt" required
+                    onchange="handleFileSelect(this)">
+
+                <div
+                    class="w-20 h-20 rounded-3xl bg-brand-500/10 flex items-center justify-center text-brand-400 mx-auto mb-6 group-hover:scale-110 transition-transform">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                </div>
+
+                <h3 class="text-xl font-bold text-white mb-2">Glissez votre fichier ici</h3>
+                <p class="text-surface-400 text-sm mb-6">Formats acceptés : PDF, DOCX, TXT (Max 16 Mo)</p>
+
+                <label for="cv_file"
+                    class="inline-flex px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-semibold cursor-pointer transition-all">
+                    Parcourir les fichiers
+                </label>
+
+                <div id="file-preview"
+                    class="hidden mt-8 p-4 bg-brand-500/5 border border-brand-500/20 rounded-2xl flex items-center justify-between text-left animate-slide-up">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-brand-500/20 flex items-center justify-center text-brand-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p id="filename-display" class="text-sm font-bold text-white truncate max-w-[200px]"></p>
+                            <p id="filesize-display" class="text-xs text-surface-400"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit"
+            class="w-full py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-brand-600/25">
+            Importer le CV
+        </button>
+    </form>
+
+    <!-- URL Upload Form -->
+    <form id="form-url" action="{{ url_for('upload') }}" method="POST" class="hidden space-y-6 animate-fade-in">
+        <input type="hidden" name="upload_type" value="url">
+
+        <div class="relative">
+            <label for="cv_url" class="block text-sm font-medium text-surface-300 mb-2">URL du CV (LinkedIn,
+                Portefeuille, etc.)</label>
+            <div class="relative group">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-surface-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                </div>
+                <input type="url" id="cv_url" name="cv_url" placeholder="https://exemple.com/mon-cv.pdf"
+                    class="block w-full pl-11 pr-4 py-4 bg-surface-900 border border-white/10 rounded-2xl text-white placeholder-surface-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all">
+            </div>
+        </div>
+
+        <button type="submit"
+            class="w-full py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-brand-600/25">
+            Enregistrer l'URL
+        </button>
+
+        <div class="p-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex gap-4">
+            <svg class="w-6 h-6 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-sm text-blue-300">Note : L'analyse des URL est asynchrone. Le CV sera ajouté à votre base dès
+                que son contenu aura été récupéré.</p>
+        </div>
+    </form>
+</div>
+
+<script>
+    function switchTab(type) {
+        const fileBtn = document.getElementById('tab-file');
+        const urlBtn = document.getElementById('tab-url');
+        const fileForm = document.getElementById('form-file');
+        const urlForm = document.getElementById('form-url');
+
+        if (type === 'file') {
+            fileBtn.classList.add('bg-brand-600', 'text-white', 'shadow-lg');
+            fileBtn.classList.remove('text-surface-400');
+            urlBtn.classList.remove('bg-brand-600', 'text-white', 'shadow-lg');
+            urlBtn.classList.add('text-surface-400');
+            fileForm.classList.remove('hidden');
+            urlForm.classList.add('hidden');
+        } else {
+            urlBtn.classList.add('bg-brand-600', 'text-white', 'shadow-lg');
+            urlBtn.classList.remove('text-surface-400');
+            fileBtn.classList.remove('bg-brand-600', 'text-white', 'shadow-lg');
+            fileBtn.classList.add('text-surface-400');
+            urlForm.classList.remove('hidden');
+            fileForm.classList.add('hidden');
+        }
+    }
+
+    function handleFileSelect(input) {
+        const preview = document.getElementById('file-preview');
+        const nameDisplay = document.getElementById('filename-display');
+        const sizeDisplay = document.getElementById('filesize-display');
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            nameDisplay.textContent = file.name;
+            sizeDisplay.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' Mo';
+            preview.classList.remove('hidden');
+        }
+    }
+
+    // Drag and drop logic
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('cv_file');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, e => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    dropZone.addEventListener('dragover', () => {
+        dropZone.querySelector('.relative').classList.add('border-brand-500', 'bg-brand-500/5');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.querySelector('.relative').classList.remove('border-brand-500', 'bg-brand-500/5');
+    });
+
+    dropZone.addEventListener('drop', e => {
+        dropZone.querySelector('.relative').classList.remove('border-brand-500', 'bg-brand-500/5');
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        handleFileSelect(fileInput);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Modifier CV — {{ cv.original_filename }}{% endblock %}
+
+{% block content %}
+{% set meta = cv.metadata_json|from_json %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-display font-extrabold text-white">Modifier le CV</h1>
+        <a href="{{ url_for('view_cv', cv_id=cv.id) }}"
+            class="text-surface-400 hover:text-white transition-colors">Annuler</a>
+    </div>
+
+    <form action="{{ url_for('edit_cv', cv_id=cv.id) }}" method="POST"
+        class="space-y-8 bg-surface-900 border border-white/5 p-8 rounded-[2rem] animate-fade-in">
+        <!-- Name -->
+        <div class="space-y-2">
+            <label for="name" class="block text-sm font-bold text-surface-400 uppercase tracking-widest">Nom
+                complet</label>
+            <input type="text" id="name" name="name" value="{{ meta.name if meta.name else cv.original_filename }}"
+                class="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-brand-500/50 outline-none transition-all">
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+                <label for="specialty"
+                    class="block text-sm font-bold text-surface-400 uppercase tracking-widest">Spécialité</label>
+                <input type="text" id="specialty" name="specialty"
+                    value="{{ meta.specialty if meta.specialty else '' }}" placeholder="Ex: Développeur Fullstack"
+                    class="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-brand-500/50 outline-none transition-all">
+            </div>
+            <div class="space-y-2">
+                <label for="experience"
+                    class="block text-sm font-bold text-surface-400 uppercase tracking-widest">Nombre d'ans
+                    d'expérience</label>
+                <input type="number" id="experience" name="experience"
+                    value="{{ meta.experience if meta.experience else '0' }}"
+                    class="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-brand-500/50 outline-none transition-all">
+            </div>
+        </div>
+
+        <!-- Emails -->
+        <div class="space-y-2">
+            <label for="emails" class="block text-sm font-bold text-surface-400 uppercase tracking-widest">E-mails
+                (séparés par des virgules)</label>
+            <input type="text" id="emails" name="emails" value="{{ meta.emails|join(', ') if meta.emails else '' }}"
+                class="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-brand-500/50 outline-none transition-all">
+        </div>
+
+        <!-- Phones -->
+        <div class="space-y-2">
+            <label for="phones" class="block text-sm font-bold text-surface-400 uppercase tracking-widest">Téléphones
+                (séparés par des virgules)</label>
+            <input type="text" id="phones" name="phones" value="{{ meta.phones|join(', ') if meta.phones else '' }}"
+                class="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-brand-500/50 outline-none transition-all">
+        </div>
+
+        <!-- Skills -->
+        <div class="space-y-2">
+            <label for="skills" class="block text-sm font-bold text-surface-400 uppercase tracking-widest">Compétences
+                (séparées par des virgules)</label>
+            <input type="text" id="skills" name="skills" value="{{ meta.skills|join(', ') if meta.skills else '' }}"
+                class="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-brand-500/50 outline-none transition-all">
+        </div>
+
+        <!-- Text Content -->
+        <div class="space-y-2">
+            <label for="text" class="block text-sm font-bold text-surface-400 uppercase tracking-widest">Contenu du CV
+                (Texte brut)</label>
+            <textarea id="text" name="text" rows="15"
+                class="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-brand-500/50 outline-none transition-all font-mono text-xs">{{ cv.text }}</textarea>
+        </div>
+
+        <button type="submit"
+            class="w-full py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-brand-600/25">
+            Enregistrer les modifications
+        </button>
+    </form>
+</div>
+{% endblock %}

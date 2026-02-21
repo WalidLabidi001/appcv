@@ -1,0 +1,726 @@
+"""
+CV Manager — Main Flask Application
+A professional CV management and search platform.
+"""
+
+import os
+import re
+import json
+import uuid
+import hashlib
+from datetime import datetime
+
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, flash, send_from_directory, jsonify, session
+)
+from functools import wraps
+import requests
+from werkzeug.utils import secure_filename
+
+from database import init_db, insert_cv, get_all_cvs, get_cv_by_id, search_cvs, delete_cv, get_stats, update_cv, check_duplicate
+import pdfplumber
+import docx
+
+# ── Configuration ──────────────────────────────────────────────────────────────
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'cv-manager-3e-x9-secret-k23')
+
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'docx'}
+MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+
+# Ensure upload directory exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+def allowed_file(filename):
+    """Check if the file extension is allowed."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def login_required(f):
+    """Decorator to protect routes that require authentication."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            flash('Veuillez vous connecter pour accéder à cette page.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def extract_text(filepath):
+    """Extract text content from a PDF or TXT file."""
+    ext = filepath.rsplit('.', 1)[1].lower()
+
+    if ext == 'txt':
+        encodings = ['utf-8', 'latin-1', 'cp1252']
+        for encoding in encodings:
+            try:
+                with open(filepath, 'r', encoding=encoding) as f:
+                    return f.read()
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+        return ""
+
+    elif ext == 'pdf':
+        try:
+            text_parts = []
+            with pdfplumber.open(filepath) as pdf:
+                for page in pdf.pages:
+                    # Try normal extraction
+                    page_text = page.extract_text(x_tolerance=2, y_tolerance=2)
+                    if not page_text:
+                        # Try with more tolerance or different layout
+                        page_text = page.extract_text(layout=True)
+                    
+                    if page_text:
+                        text_parts.append(page_text)
+            
+            extracted_text = '\n'.join(text_parts).strip()
+            
+            # If still no text, check if it has objects at all (scanned check)
+            if not extracted_text:
+                return "[ERREUR: Le document semble être une image scannée ou est protégé par mot de passe. Le texte n'a pas pu être extrait automatiquement.]"
+            
+            return extracted_text
+        except Exception as e:
+            print(f"Erreur reading PDF with pdfplumber: {e}")
+            return f"[ERREUR TECHNIQUE: {str(e)}]"
+
+    elif ext == 'docx':
+        try:
+            doc = docx.Document(filepath)
+            text_parts = [p.text for p in doc.paragraphs]
+            return '\n'.join(text_parts).strip()
+        except Exception as e:
+            print(f"Erreur reading DOCX: {e}")
+            return f"[ERREUR TECHNIQUE: {str(e)}]"
+
+    return ""
+
+
+def parse_cv_metadata(text):
+    """
+    Advanced CV metadata extraction from raw text.
+    Extracts emails, phone numbers, names, specialty, and identifies skills/sections.
+    """
+    metadata = {
+        'emails': [],
+        'phones': [],
+        'skills': [],
+        'sections': [],
+        'name': 'Inconnu',
+        'specialty': 'À définir',
+        'experience': '0'
+    }
+
+    if not text or not text.strip() or "[ERREUR" in text:
+        return metadata
+
+    # Extract emails
+    email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+    metadata['emails'] = list(set(re.findall(email_pattern, text)))
+
+    # Extract phone numbers (more robust pattern)
+    phone_pattern = r'(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}|(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{2,4}[-.\s]?\d{2,4}(?:[-.\s]?\d{2,4})?'
+    phones = re.findall(phone_pattern, text)
+    metadata['phones'] = list(set([p.strip() for p in phones if len(re.sub(r'\D', '', p)) >= 8]))[:5]
+
+    # Enhanced skill keywords
+    skill_keywords = [
+        'Python', 'JavaScript', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Swift', 'TypeScript', 'Go', 'Rust', 'Kotlin', 'SQL', 
+        'React', 'Angular', 'Vue', 'Django', 'Flask', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP', 'Terraform', 'Ansible'
+    ]
+    text_lower = text.lower()
+    for skill in skill_keywords:
+        if re.search(r'\b' + re.escape(skill.lower()) + r'\b', text_lower):
+            metadata['skills'].append(skill)
+
+    # Detect Name first to help with Specialty
+    lines = [l.strip() for l in text.split('\n') if l.strip()]
+    name_index = -1
+    for i, line in enumerate(lines[:10]):
+        # Name pattern: 2 or 3 words, capitalized, no weird chars
+        if 2 <= len(line.split()) <= 4 and len(line) < 50:
+            if re.match(r'^[A-Z][a-zà-ÿ\-]+\s+[A-Z][a-zà-ÿ\-]+(?:\s+[A-Z][a-zà-ÿ\-]+){0,2}$', line):
+                metadata['name'] = line
+                name_index = i
+                break
+
+    # Detect Specialty (Job Title)
+    found_spec = False
+    
+    # Heuristic 1: Check lines immediately after the name (very high accuracy for CVs)
+    if name_index != -1 and name_index + 1 < len(lines):
+        for i in range(name_index + 1, min(name_index + 4, len(lines))):
+            potential_title = lines[i]
+            # A job title is usually one line, not too long, no period at end
+            if 5 < len(potential_title) < 70 and not potential_title.endswith('.'):
+                title_keywords = ['ingénieur', 'développeur', 'engineer', 'developer', 'analyst', 'manager', 'designer', 
+                                 'consultant', 'architecte', 'technicien', 'expert', 'specialist', 'scientist', 'lead', 'directeur']
+                if any(kw in potential_title.lower() for kw in title_keywords):
+                    metadata['specialty'] = potential_title
+                    found_spec = True
+                    break
+
+    # Heuristic 2: Predefined list of specialties (Fallback)
+    if not found_spec:
+        specialties = [
+            'Data Scientist', 'Data Analyst', 'Data Engineer', 'Machine Learning Engineer',
+            'Développeur Fullstack', 'Fullstack Developer', 'Full Stack Developer',
+            'Développeur Backend', 'Backend Developer', 'Développeur Frontend', 'Frontend Developer',
+            'Développeur Mobile', 'iOS Developer', 'Android Developer',
+            'Ingénieur Cloud', 'Cloud Engineer', 'DevOps', 'SysOps', 'Site Reliability Engineer',
+            'Développeur', 'Ingénieur', 'Designer', 'UX/UI', 'Chef de projet', 'Project Manager', 
+            'Consultant', 'Architecte', 'Manager', 'Analyste', 'Administrateur', 'Technicien', 
+            'Commercial', 'Comptable', 'RH', 'Marketing'
+        ]
+        
+        header_text = text_lower[:800]
+        for spec in specialties:
+            if spec.lower() in header_text:
+                metadata['specialty'] = spec
+                found_spec = True
+                break
+        
+        if not found_spec:
+            for spec in specialties:
+                if spec.lower() in text_lower:
+                    metadata['specialty'] = spec
+                    break
+
+    # Extract Years of Experience
+    # 1. Look for explicit mentions like "X ans d'expérience"
+    exp_patterns = [
+        r'(\d+)\s*(?:ans|années?)\s*d\'exp[eé]rience',
+        r'(\d+)\s*(?:ans|ann[eé]es?)\s*exp',
+        r'exp[eé]rience\s*(?:professionnelle)?\s*[:\s-]*\s*(\d+)\s*(?:ans|ann)',
+        r'plus\s*de\s*(\d+)\s*(?:ans|ann)',
+        r'expertise\s*[:\s-]*\s*(\d+)\s*(?:ans|ann)',
+        r'(\d+)\s*(?:years?|yrs)\s*(?:of\s*)?exp',
+        r'(\d+)\s*(?:years?|yrs)\s*(?:of\s*)?experience',
+        r'senior\s*\(\s*(\d+)\s*\+\s*ans\s*\)',
+    ]
+    
+    for pattern in exp_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            metadata['experience'] = match.group(1)
+            break
+    
+    # Extract Years of Experience
+    # 1. Look for explicit mentions like "X ans d'expérience"
+    exp_patterns = [
+        r'(\d+)\s*(?:ans|années?)\s*d\'exp[eé]rience',
+        r'(\d+)\s*(?:ans|ann[eé]es?)\s*exp',
+        r'exp[eé]rience\s*(?:professionnelle)?\s*[:\s-]*\s*(\d+)\s*(?:ans|ann)',
+        r'plus\s*de\s*(\d+)\s*(?:ans|ann)',
+        r'expertise\s*[:\s-]*\s*(\d+)\s*(?:ans|ann)',
+        r'(\d+)\s*(?:years?|yrs)\s*(?:of\s*)?exp',
+        r'(\d+)\s*(?:years?|yrs)\s*(?:of\s*)?experience',
+        r'senior\s*\(\s*(\d+)\s*\+\s*ans\s*\)',
+    ]
+    
+    for pattern in exp_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            metadata['experience'] = match.group(1)
+            break
+    
+    # 2. Advanced Heuristic: Calculate sum of work durations
+    if metadata['experience'] == '0':
+        import datetime
+        current_date = datetime.datetime.now()
+        current_year = current_date.year
+        current_month = current_date.month
+        
+        months_map = {
+            'jan': 1, 'janv': 1, 'janvier': 1, 'january': 1,
+            'fév': 2, 'févr': 2, 'février': 2, 'feb': 2, 'february': 2,
+            'mar': 3, 'mars': 3, 'march': 3,
+            'avr': 4, 'avril': 4, 'apr': 4, 'april': 4,
+            'mai': 5, 'may': 5,
+            'jui': 6, 'juin': 6, 'jun': 6, 'june': 6,
+            'jul': 7, 'juil': 7, 'juillet': 7, 'july': 7,
+            'aoû': 8, 'août': 8, 'aug': 8, 'august': 8,
+            'sep': 9, 'sept': 9, 'septembre': 9, 'september': 9,
+            'oct': 10, 'octobre': 10, 'october': 10,
+            'nov': 11, 'novembre': 11, 'november': 11,
+            'déc': 12, 'dec': 12, 'décembre': 12, 'december': 12
+        }
+        
+        month_regex = r'(?:janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre|january|february|march|april|may|june|july|august|september|october|november|december|janv?|f[eé]vr?|mar|apr|jun|jul|aug|sep|oct|nov|d[eé]c)'
+        year_regex = r'\b(?:20[0-2]\d|19[7-9]\d)\b'
+        present_regex = r'(?:pr[eé]sent|aujourd|maintenant|today|actuel|en cours)'
+        
+        lines = text.split('\n')
+        exp_start = -1
+        edu_start = -1
+        
+        exp_headers = ['expé', 'experience', 'work history', 'parcours professionnel', 'emploi', 'poste', 'career']
+        edu_headers = ['formation', 'éducation', 'education', 'académique', 'diplôme', 'cursus', 'études', 'certif', 'university', 'university', 'master', 'engineering degree']
+        
+        # Locate sections with higher flexibility
+        for i, line in enumerate(lines):
+            low_line = line.lower().strip()
+            if exp_start == -1 and any(h in low_line for h in exp_headers) and len(low_line) < 50:
+                exp_start = i
+            if edu_start == -1 and any(h in low_line for h in edu_headers) and len(low_line) < 50:
+                edu_start = i
+        
+        total_months = 0
+        periods = [] # To store (start_month, start_year, end_month, end_year)
+        
+        # Analyze lines for date ranges
+        # We focus on the section from exp_start or look globally if exp_start not found
+        # BUT we MUST ignore any line that is likely education
+        look_lines = lines[exp_start:] if exp_start != -1 else lines
+        
+        # Simplified range pattern
+        range_pattern = rf'({month_regex})?\s*({year_regex})\s*[-–—àau]t?o?\s*({present_regex}|(?:({month_regex})?\s*({year_regex})))'
+        
+        academic_keywords = ['université', 'university', 'master', 'licence', 'bachelor', 'baccalauréat', 'diplôme', 'école', 'school', 'formation', 'étudiant', 'student', 'enseignement', 'degree']
+        
+        for i, line in enumerate(look_lines):
+            low_line = line.lower()
+            # Hard check: skip lines with academic keywords
+            if any(kw in low_line for kw in academic_keywords):
+                continue
+            
+            matches = re.finditer(range_pattern, low_line)
+            for m in matches:
+                m1_str, y1_str, end_part, m2_str, y2_str = m.groups()
+                
+                y1 = int(y1_str)
+                m1 = months_map.get(m1_str[:3] if m1_str else '', 1) 
+                
+                if any(p in end_part for p in ['present', 'aujourd', 'maintenant', 'today', 'actuel', 'en cours']):
+                    y2 = current_year
+                    m2 = current_month
+                elif y2_str:
+                    y2 = int(y2_str)
+                    m2 = months_map.get(m2_str[:3] if m2_str else '', 1)
+                else:
+                    continue
+                
+                # Check if this range is realistic
+                duration = (y2 - y1) * 12 + (m2 - m1)
+                if 0 < duration < 500:
+                    periods.append((y1, m1, y2, m2))
+        
+        # Merge periods to avoid double counting (e.g. overlapping ranges)
+        if periods:
+            # Sort by start year/month
+            periods.sort()
+            merged_months = 0
+            curr_start = -1
+            curr_end = -1
+            
+            for y1, m1, y2, m2 in periods:
+                start_val = y1 * 12 + m1
+                end_val = y2 * 12 + m2
+                
+                if curr_start == -1:
+                    curr_start = start_val
+                    curr_end = end_val
+                elif start_val <= curr_end:
+                    # Overlap, extend end if needed
+                    curr_end = max(curr_end, end_val)
+                else:
+                    # Gap, add previous duration and start new
+                    merged_months += (curr_end - curr_start)
+                    curr_start = start_val
+                    curr_end = end_val
+            
+            # Add the last period
+            merged_months += (curr_end - curr_start)
+            metadata['experience'] = str(max(1, round(merged_months / 12)))
+        
+        # Final fallback: Earliest year in professional section
+        if metadata['experience'] == '0' and exp_start != -1:
+            work_years = []
+            exp_end = edu_start if (edu_start != -1 and edu_start > exp_start) else len(lines)
+            for i in range(exp_start, exp_end):
+                line = lines[i].lower()
+                if not any(kw in line for kw in academic_keywords):
+                    years = re.findall(year_regex, line)
+                    work_years.extend([int(y) for y in years])
+            
+            if work_years:
+                valid = [y for y in work_years if 1980 < y <= current_year]
+                if valid:
+                    metadata['experience'] = str(current_year - min(valid))
+
+    # Detect sections
+    section_patterns = [
+        r'(?i)(exp[eé]riences?\s*(?:professionnelles?)?)',
+        r'(?i)(formations?\s*(?:acad[eé]miques?|diplomes?)?)',
+        r'(?i)(comp[eé]tences?)',
+        r'(?i)(education|academic|skills|languages|projets|hobbies|profil)',
+    ]
+
+    for pattern in section_patterns:
+        matches = re.findall(pattern, text)
+        if matches:
+            val = matches[0]
+            if isinstance(val, tuple): val = val[0]
+            metadata['sections'].append(val.strip().title())
+
+    metadata['sections'] = list(set(metadata['sections']))
+
+    return metadata
+
+
+def get_text_preview(text, max_length=200):
+    """Get a preview of the text, truncated to max_length characters."""
+    if not text:
+        return "Aucun contenu extrait"
+    text = ' '.join(text.split())  # Normalize whitespace
+    if len(text) <= max_length:
+        return text
+    return text[:max_length].rsplit(' ', 1)[0] + '…'
+
+
+# ── Template Filters ──────────────────────────────────────────────────────────
+@app.template_filter('preview')
+def preview_filter(text, length=200):
+    return get_text_preview(text, length)
+
+
+@app.template_filter('from_json')
+def from_json_filter(value):
+    try:
+        return json.loads(value) if value else {}
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
+@app.template_filter('format_date')
+def format_date_filter(value):
+    if not value:
+        return ''
+    try:
+        dt = datetime.strptime(str(value), '%Y-%m-%d %H:%M:%S')
+        return dt.strftime('%d/%m/%Y à %H:%M')
+    except ValueError:
+        return str(value)
+
+
+# ── Routes ─────────────────────────────────────────────────────────────────────
+
+@app.route('/')
+def landing():
+    """Landing page with hero section and call-to-action."""
+    stats = get_stats()
+    return render_template('landing.html', stats=stats)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page for admin access."""
+    if session.get('logged_in'):
+        return redirect(url_for('dashboard'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # Simple hardcoded credentials for demo/local use
+        # In production, these should be in a database with hashed passwords
+        if username == 'admin' and password == 'admin123':
+            session['logged_in'] = True
+            flash('Connexion réussie ! Bienvenue dans l\'espace administrateur.', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Identifiants invalides.', 'error')
+            
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    """Logout and clear session."""
+    session.pop('logged_in', None)
+    flash('Vous avez été déconnecté.', 'info')
+    return redirect(url_for('landing'))
+
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload():
+    """Handle CV upload via file or URL."""
+    if request.method == 'POST':
+        upload_type = request.form.get('upload_type', 'file')
+
+        if upload_type == 'file':
+            # File upload
+            if 'cv_file' not in request.files:
+                flash('Aucun fichier sélectionné.', 'error')
+                return redirect(request.url)
+
+            file = request.files['cv_file']
+            if file.filename == '':
+                flash('Aucun fichier sélectionné.', 'error')
+                return redirect(request.url)
+
+            if file and allowed_file(file.filename):
+                original_filename = secure_filename(file.filename)
+                
+                # Check for duplicate
+                existing_id = check_duplicate(original_filename)
+                if existing_id:
+                    flash(f'Ce CV ({original_filename}) existe déjà dans la base de données.', 'warning')
+                    return redirect(url_for('view_cv', cv_id=existing_id))
+
+                # Generate unique filename to avoid collisions
+                ext = original_filename.rsplit('.', 1)[1].lower()
+                unique_filename = f"{uuid.uuid4().hex}.{ext}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                file.save(filepath)
+
+                # Extract text
+                text = extract_text(filepath)
+                if not text.strip():
+                    flash('Impossible d\'extraire le texte du fichier. Le fichier est peut-être vide ou protégé.', 'warning')
+
+                # Parse metadata
+                metadata = parse_cv_metadata(text)
+
+                # Insert into database
+                cv_id = insert_cv(
+                    filename=unique_filename,
+                    original_filename=original_filename,
+                    file_type='file',
+                    text=text,
+                    metadata=metadata
+                )
+
+                flash(f'CV "{original_filename}" importé avec succès !', 'success')
+                return redirect(url_for('view_cv', cv_id=cv_id))
+            else:
+                flash('Format de fichier non supporté. Utilisez PDF, DOCX ou TXT.', 'error')
+                return redirect(request.url)
+
+        elif upload_type == 'url':
+            # URL upload
+            cv_url = request.form.get('cv_url', '').strip()
+            if not cv_url:
+                flash('Veuillez entrer une URL.', 'error')
+                return redirect(request.url)
+
+            try:
+                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+                response = requests.get(cv_url, timeout=10, stream=True, headers=headers)
+                response.raise_for_status()
+                
+                content_type = response.headers.get('Content-Type', '').lower()
+                if 'pdf' in content_type: ext = 'pdf'
+                elif 'word' in content_type or 'officedocument' in content_type: ext = 'docx'
+                else: ext = 'txt'
+                
+                # If extension not in URL, try to guess from content type
+                if not any(cv_url.lower().endswith(e) for e in ALLOWED_EXTENSIONS):
+                    unique_filename = f"{uuid.uuid4().hex}.{ext}"
+                else:
+                    original_name = cv_url.split('/')[-1] or "downloaded_cv"
+                    unique_filename = f"{uuid.uuid4().hex}_{secure_filename(original_name)}"
+
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                
+                with open(filepath, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                # Extract text
+                text = extract_text(filepath)
+                metadata = parse_cv_metadata(text)
+                metadata['source_url'] = cv_url
+                
+                # Insert into database
+                cv_id = insert_cv(
+                    filename=unique_filename,
+                    original_filename=cv_url.split('/')[-1] or cv_url,
+                    file_type='url',
+                    text=text,
+                    url=cv_url,
+                    metadata=metadata
+                )
+                
+                flash('CV récupéré et analysé avec succès !', 'success')
+                return redirect(url_for('view_cv', cv_id=cv_id))
+                
+            except Exception as e:
+                flash(f"Erreur lors de la récupération de l'URL : {str(e)}", 'error')
+                return redirect(request.url)
+
+    return render_template('upload.html')
+
+
+@app.route('/search')
+@login_required
+def search():
+    """Search CVs with text or voice input."""
+    query = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    results = []
+    total = 0
+    total_pages = 0
+
+    if query:
+        results, total, total_pages = search_cvs(query, page=page)
+
+    return render_template(
+        'search.html',
+        query=query,
+        results=results,
+        total=total,
+        page=page,
+        total_pages=total_pages
+    )
+
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    """Display all CVs in a dashboard view."""
+    page = request.args.get('page', 1, type=int)
+    filter_type = request.args.get('type', '')
+    cvs, total, total_pages = get_all_cvs(page=page, file_type=filter_type)
+    stats = get_stats()
+
+    return render_template(
+        'dashboard.html',
+        cvs=cvs,
+        total=total,
+        page=page,
+        total_pages=total_pages,
+        stats=stats,
+        filter_type=filter_type
+    )
+
+
+@app.route('/cv/<int:cv_id>')
+@login_required
+def view_cv(cv_id):
+    """View detailed information about a specific CV."""
+    cv = get_cv_by_id(cv_id)
+    if not cv:
+        flash('CV non trouvé.', 'error')
+        return redirect(url_for('dashboard'))
+    return render_template('view_cv.html', cv=cv)
+
+
+@app.route('/cv/<int:cv_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_cv(cv_id):
+    """Edit CV metadata and text."""
+    cv = get_cv_by_id(cv_id)
+    if not cv:
+        flash('CV non trouvé.', 'error')
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        specialty = request.form.get('specialty', '').strip()
+        experience = request.form.get('experience', '').strip()
+        text = request.form.get('text', '').strip()
+        emails = request.form.get('emails', '').split(',')
+        phones = request.form.get('phones', '').split(',')
+        skills = request.form.get('skills', '').split(',')
+        
+        # Clean up lists
+        emails = [e.strip() for e in emails if e.strip()]
+        phones = [p.strip() for p in phones if p.strip()]
+        skills = [s.strip() for s in skills if s.strip()]
+        
+        metadata = json.loads(cv['metadata_json'])
+        metadata['name'] = name
+        metadata['specialty'] = specialty
+        metadata['experience'] = experience
+        metadata['emails'] = emails
+        metadata['phones'] = phones
+        metadata['skills'] = skills
+        
+        update_cv(cv_id, text, metadata)
+        flash('CV mis à jour avec succès.', 'success')
+        return redirect(url_for('view_cv', cv_id=cv_id))
+
+    return render_template('edit_cv.html', cv=cv)
+
+
+@app.route('/cv/<int:cv_id>/delete', methods=['POST'])
+@login_required
+def delete_cv_route(cv_id):
+    """Delete a CV and its associated file."""
+    cv = get_cv_by_id(cv_id)
+    if cv:
+        # Delete file if it exists
+        if cv['file_type'] == 'file':
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], cv['filename'])
+            if os.path.exists(filepath):
+                os.remove(filepath)
+        delete_cv(cv_id)
+        flash('CV supprimé avec succès.', 'success')
+    else:
+        flash('CV non trouvé.', 'error')
+
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/cv/<int:cv_id>/download')
+@login_required
+def download_cv(cv_id):
+    """Download the original CV file."""
+    cv = get_cv_by_id(cv_id)
+    if cv and cv['file_type'] == 'file':
+        return send_from_directory(
+            app.config['UPLOAD_FOLDER'],
+            cv['filename'],
+            as_attachment=True,
+            download_name=cv['original_filename']
+        )
+    flash('Fichier non disponible.', 'error')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/api/search')
+@login_required
+def api_search():
+    """API endpoint for AJAX search."""
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({'results': [], 'total': 0})
+
+    results, total, _ = search_cvs(query, per_page=5)
+    return jsonify({
+        'results': [{
+            'id': r['id'],
+            'filename': r['original_filename'],
+            'preview': get_text_preview(r['text'], 150),
+            'created_at': r['created_at']
+        } for r in results],
+        'total': total
+    })
+
+
+# ── Error Handlers ─────────────────────────────────────────────────────────────
+@app.errorhandler(404)
+def not_found(e):
+    return render_template('base.html', error_code=404, error_message='Page non trouvée'), 404
+
+
+@app.errorhandler(413)
+def too_large(e):
+    flash('Le fichier est trop volumineux. Taille maximale : 16 Mo.', 'error')
+    return redirect(url_for('upload'))
+
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True, port=5000)
