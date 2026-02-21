@@ -233,127 +233,90 @@ def parse_cv_metadata(text):
             metadata['experience'] = match.group(1)
             break
     
-    # 2. Advanced Heuristic: Calculate sum of work durations
+    # 2. Advanced Heuristic: Sum of Clean Work Durations
     if metadata['experience'] == '0':
         import datetime
-        current_date = datetime.datetime.now()
-        current_year = current_date.year
-        current_month = current_date.month
+        now = datetime.datetime.now()
+        current_year, current_month = now.year, now.month
         
         months_map = {
-            'jan': 1, 'janv': 1, 'janvier': 1, 'january': 1,
-            'fév': 2, 'févr': 2, 'février': 2, 'feb': 2, 'february': 2,
-            'mar': 3, 'mars': 3, 'march': 3,
-            'avr': 4, 'avril': 4, 'apr': 4, 'april': 4,
-            'mai': 5, 'may': 5,
-            'jui': 6, 'juin': 6, 'jun': 6, 'june': 6,
-            'jul': 7, 'juil': 7, 'juillet': 7, 'july': 7,
-            'aoû': 8, 'août': 8, 'aug': 8, 'august': 8,
-            'sep': 9, 'sept': 9, 'septembre': 9, 'september': 9,
-            'oct': 10, 'octobre': 10, 'october': 10,
-            'nov': 11, 'novembre': 11, 'november': 11,
-            'déc': 12, 'dec': 12, 'décembre': 12, 'december': 12
+            'jan': 1, 'fév': 2, 'mar': 3, 'avr': 4, 'mai': 5, 'jui': 6, 
+            'jul': 7, 'aoû': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'déc': 12,
+            'feb': 2, 'apr': 4, 'jun': 6, 'aug': 8
         }
+        
+        # Comprehensive academic filters
+        academic_keywords = [
+            'université', 'university', 'master', 'licence', 'bachelor', 'baccalauréat', 'bac ', 'bac+',
+            'diplôme', 'école', 'school', 'formation', 'étudiant', 'student', 'enseignement', 'degree',
+            'cursus', 'académique', 'education', 'enseignement', 'msc ', 'phd', 'doctorat'
+        ]
         
         month_regex = r'(?:janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre|january|february|march|april|may|june|july|august|september|october|november|december|janv?|f[eé]vr?|mar|apr|jun|jul|aug|sep|oct|nov|d[eé]c)'
         year_regex = r'\b(?:20[0-2]\d|19[7-9]\d)\b'
-        present_regex = r'(?:pr[eé]sent|aujourd|maintenant|today|actuel|en cours)'
-        
-        lines = text.split('\n')
-        exp_start = -1
-        edu_start = -1
-        
-        exp_headers = ['expé', 'experience', 'work history', 'parcours professionnel', 'emploi', 'poste', 'career']
-        edu_headers = ['formation', 'éducation', 'education', 'académique', 'diplôme', 'cursus', 'études', 'certif', 'university', 'university', 'master', 'engineering degree']
-        
-        # Locate sections with higher flexibility
-        for i, line in enumerate(lines):
-            low_line = line.lower().strip()
-            if exp_start == -1 and any(h in low_line for h in exp_headers) and len(low_line) < 50:
-                exp_start = i
-            if edu_start == -1 and any(h in low_line for h in edu_headers) and len(low_line) < 50:
-                edu_start = i
-        
-        total_months = 0
-        periods = [] # To store (start_month, start_year, end_month, end_year)
-        
-        # Analyze lines for date ranges
-        # We focus on the section from exp_start or look globally if exp_start not found
-        # BUT we MUST ignore any line that is likely education
-        look_lines = lines[exp_start:] if exp_start != -1 else lines
-        
-        # Simplified range pattern
+        present_regex = r'(?:pr[eé]sent|aujourd|maintenant|today|actuel|en cours|now)'
         range_pattern = rf'({month_regex})?\s*({year_regex})\s*[-–—àau]t?o?\s*({present_regex}|(?:({month_regex})?\s*({year_regex})))'
         
-        academic_keywords = ['université', 'university', 'master', 'licence', 'bachelor', 'baccalauréat', 'diplôme', 'école', 'school', 'formation', 'étudiant', 'student', 'enseignement', 'degree']
+        lines = text.split('\n')
+        periods = []
         
-        for i, line in enumerate(look_lines):
+        # Pass 1: Collect date ranges while avoiding academic lines
+        for i, line in enumerate(lines):
             low_line = line.lower()
-            # Hard check: skip lines with academic keywords
-            if any(kw in low_line for kw in academic_keywords):
-                continue
+            
+            # Context check: check this line and 3 lines above for academic keywords
+            context_text = ""
+            for j in range(max(0, i-3), i+1):
+                context_text += lines[j].lower() + " "
+            
+            if any(kw in context_text for kw in academic_keywords):
+                continue # Skip academic entries
             
             matches = re.finditer(range_pattern, low_line)
             for m in matches:
                 m1_str, y1_str, end_part, m2_str, y2_str = m.groups()
-                
                 y1 = int(y1_str)
-                m1 = months_map.get(m1_str[:3] if m1_str else '', 1) 
+                m1 = months_map.get(m1_str[:3] if m1_str else '', 1)
                 
-                if any(p in end_part for p in ['present', 'aujourd', 'maintenant', 'today', 'actuel', 'en cours']):
-                    y2 = current_year
-                    m2 = current_month
+                if any(p in str(end_part) for p in ['present', 'aujourd', 'maintenant', 'today', 'actuel', 'en cours', 'now']):
+                    y2, m2 = current_year, current_month
                 elif y2_str:
                     y2 = int(y2_str)
                     m2 = months_map.get(m2_str[:3] if m2_str else '', 1)
                 else:
                     continue
                 
-                # Check if this range is realistic
                 duration = (y2 - y1) * 12 + (m2 - m1)
-                if 0 < duration < 500:
-                    periods.append((y1, m1, y2, m2))
+                if 0 < duration < 480: # Max 40 years
+                    periods.append((y1 * 12 + m1, y2 * 12 + m2))
         
-        # Merge periods to avoid double counting (e.g. overlapping ranges)
+        # Pass 2: Merge overlapping periods
         if periods:
-            # Sort by start year/month
             periods.sort()
             merged_months = 0
-            curr_start = -1
-            curr_end = -1
-            
-            for y1, m1, y2, m2 in periods:
-                start_val = y1 * 12 + m1
-                end_val = y2 * 12 + m2
-                
+            curr_start, curr_end = -1, -1
+            for start, end in periods:
                 if curr_start == -1:
-                    curr_start = start_val
-                    curr_end = end_val
-                elif start_val <= curr_end:
-                    # Overlap, extend end if needed
-                    curr_end = max(curr_end, end_val)
+                    curr_start, curr_end = start, end
+                elif start <= curr_end:
+                    curr_end = max(curr_end, end)
                 else:
-                    # Gap, add previous duration and start new
                     merged_months += (curr_end - curr_start)
-                    curr_start = start_val
-                    curr_end = end_val
-            
-            # Add the last period
+                    curr_start, curr_end = start, end
             merged_months += (curr_end - curr_start)
             metadata['experience'] = str(max(1, round(merged_months / 12)))
         
-        # Final fallback: Earliest year in professional section
-        if metadata['experience'] == '0' and exp_start != -1:
-            work_years = []
-            exp_end = edu_start if (edu_start != -1 and edu_start > exp_start) else len(lines)
-            for i in range(exp_start, exp_end):
-                line = lines[i].lower()
-                if not any(kw in line for kw in academic_keywords):
-                    years = re.findall(year_regex, line)
-                    work_years.extend([int(y) for y in years])
+        # Pass 3: Fallback (Earliest Year) - only if still 0
+        if metadata['experience'] == '0':
+            all_work_years = []
+            for line in lines:
+                low_line = line.lower()
+                if not any(kw in low_line for kw in academic_keywords):
+                    years = re.findall(year_regex, low_line)
+                    all_work_years.extend([int(y) for y in years])
             
-            if work_years:
-                valid = [y for y in work_years if 1980 < y <= current_year]
+            if all_work_years:
+                valid = [y for y in all_work_years if 1980 < y <= current_year]
                 if valid:
                     metadata['experience'] = str(current_year - min(valid))
 
@@ -418,7 +381,7 @@ def format_date_filter(value):
 def landing():
     """Landing page with hero section and call-to-action."""
     stats = get_stats()
-    return render_template('landing.html', stats=stats)
+    return render_template('index.html', stats=stats)
 
 
 @app.route('/login', methods=['GET', 'POST'])
