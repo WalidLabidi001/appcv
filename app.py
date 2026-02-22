@@ -130,7 +130,29 @@ def parse_cv_metadata(text):
     # Extract phone numbers (more robust pattern)
     phone_pattern = r'(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}|(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{2,4}[-.\s]?\d{2,4}(?:[-.\s]?\d{2,4})?'
     phones = re.findall(phone_pattern, text)
-    metadata['phones'] = list(set([p.strip() for p in phones if len(re.sub(r'\D', '', p)) >= 8]))[:5]
+    
+    # Filter out false positives (date ranges like 2018-2019, short numbers, etc.)
+    year_range_pattern = re.compile(r'^\s*\d{4}\s*[-–]\s*\d{4}\s*$')
+    year_pattern = re.compile(r'^\s*(19|20)\d{2}\s*$')
+    filtered_phones = []
+    for p in phones:
+        p_clean = p.strip()
+        digits_only = re.sub(r'\D', '', p_clean)
+        # Must have at least 8 digits
+        if len(digits_only) < 8:
+            continue
+        # Must NOT look like a year range (e.g. "2018-2019")
+        if year_range_pattern.match(p_clean):
+            continue
+        # Must NOT be just a single year
+        if year_pattern.match(p_clean):
+            continue
+        # Must start with +, 0, or ( to look like a real phone number
+        if not re.match(r'^[\s]*[+0(]', p_clean):
+            continue
+        filtered_phones.append(p_clean)
+    
+    metadata['phones'] = list(set(filtered_phones))[:5]
 
     # Enhanced skill keywords
     skill_keywords = [
@@ -145,50 +167,127 @@ def parse_cv_metadata(text):
     # Detect Name first to help with Specialty
     lines = [l.strip() for l in text.split('\n') if l.strip()]
     name_index = -1
-    for i, line in enumerate(lines[:10]):
-        # Name pattern: 2 or 3 words, capitalized, no weird chars
-        if 2 <= len(line.split()) <= 4 and len(line) < 50:
-            if re.match(r'^[A-Z][a-zà-ÿ\-]+\s+[A-Z][a-zà-ÿ\-]+(?:\s+[A-Z][a-zà-ÿ\-]+){0,2}$', line):
-                metadata['name'] = line
-                name_index = i
-                break
-
-    # Detect Specialty (Job Title)
+    
+    # Skip words for name detection (academic & professional terms that are NOT names)
+    skip_words = ['experience', 'expérience', 'formation', 'compétence', 'contact', 'profil', 
+                 'adresse', 'email', 'tel', 'téléphone', 'www', 'http', '@', 'cv', 'curriculum',
+                 'ingénieur', 'développeur', 'engineer', 'developer', 'manager', 'consultant',
+                 'stage', 'poste', 'emploi', 'date', 'lieu', 'ville', 'pays',
+                 'preparatory', 'préparatoire', 'cycle', 'physic', 'chemistry', 'math',
+                 'national', 'diploma', 'diplôme', 'bachelor', 'master', 'licence',
+                 'school', 'école', 'university', 'université', 'institute', 'institut',
+                 'education', 'overview', 'profile', 'summary', 'objective',
+                 'computer', 'science', 'engineering', 'industrial', 'degree',
+                 'sfax', 'tunis', 'tunisia', 'france', 'paris', 'lyon']
+    
+    # Heuristic 0: Check for "Name | Title" or "Name – Title" format (very common in modern CVs)
     found_spec = False
+    for i, line in enumerate(lines[:10]):
+        # Check for separators: |, –, —, /
+        for sep in ['|', '–', '—']:
+            if sep in line:
+                parts = line.split(sep, 1)
+                name_part = parts[0].strip()
+                title_part = parts[1].strip() if len(parts) > 1 else ''
+                
+                name_words = name_part.split()
+                # Validate name part: 2-3 words, reasonable length
+                if 2 <= len(name_words) <= 3 and len(name_part) < 40:
+                    # Check it looks like a name (capitalized words, no skip words)
+                    if not any(sw in name_part.lower() for sw in skip_words):
+                        if all(w[0].isupper() for w in name_words if w):
+                            metadata['name'] = name_part
+                            name_index = i
+                            # Also grab the title from the other side of the separator
+                            if title_part and len(title_part) > 3:
+                                metadata['specialty'] = title_part
+                                found_spec = True
+                            break
+            if name_index != -1:
+                break
+        if name_index != -1:
+            break
+    
+    # Heuristic 1: Standard line-by-line name detection
+    if name_index == -1:
+        for i, line in enumerate(lines[:15]):
+            words = line.split()
+            # Name pattern: 2-3 words, reasonable length
+            if 2 <= len(words) <= 3 and len(line) < 50:
+                if any(sw in line.lower() for sw in skip_words):
+                    continue
+                
+                # Pattern 1: "Prénom Nom" or "Prénom Nom Nom" (Title case)
+                if re.match(r'^[A-ZÀ-Ÿ][a-zà-ÿ\-]+\s+[A-ZÀ-Ÿ][a-zà-ÿ\-]+(?:\s+[A-ZÀ-Ÿ][a-zà-ÿ\-]+)?$', line):
+                    metadata['name'] = line
+                    name_index = i
+                    break
+                
+                # Pattern 2: "PRÉNOM NOM" (ALL CAPS - very common in CVs)
+                if re.match(r'^[A-ZÀ-Ÿ\-]{2,}\s+[A-ZÀ-Ÿ\-]{2,}(?:\s+[A-ZÀ-Ÿ\-]{2,})?$', line):
+                    metadata['name'] = line.title()
+                    name_index = i
+                    break
+                
+                # Pattern 3: Mixed - "PRÉNOM Nom" or "Prénom NOM"
+                if re.match(r'^[A-ZÀ-Ÿa-zà-ÿ\-]{2,}\s+[A-ZÀ-Ÿa-zà-ÿ\-]{2,}(?:\s+[A-ZÀ-Ÿa-zà-ÿ\-]{2,})?$', line):
+                    if any(w[0].isupper() for w in words):
+                        common_words = ['les', 'des', 'pour', 'dans', 'avec', 'sur', 'par', 'une', 'the', 'and', 'for']
+                        if not any(w.lower() in common_words for w in words):
+                            metadata['name'] = ' '.join(w.capitalize() if w.isupper() and len(w) > 2 else w for w in words)
+                            name_index = i
+                            break
+
+    # Detect Specialty (Job Title) - skip if already found from "Name | Title" format
     
     # Heuristic 1: Check lines immediately after the name (very high accuracy for CVs)
-    if name_index != -1 and name_index + 1 < len(lines):
+    if not found_spec and name_index != -1 and name_index + 1 < len(lines):
         for i in range(name_index + 1, min(name_index + 4, len(lines))):
             potential_title = lines[i]
             # A job title is usually one line, not too long, no period at end
-            if 5 < len(potential_title) < 70 and not potential_title.endswith('.'):
+            if 3 < len(potential_title) < 80 and not potential_title.endswith('.'):
                 title_keywords = ['ingénieur', 'développeur', 'engineer', 'developer', 'analyst', 'manager', 'designer', 
-                                 'consultant', 'architecte', 'technicien', 'expert', 'specialist', 'scientist', 'lead', 'directeur']
+                                 'consultant', 'architecte', 'technicien', 'expert', 'specialist', 'scientist', 'lead', 
+                                 'directeur', 'data', 'devops', 'cloud', 'fullstack', 'full stack', 'backend', 'frontend',
+                                 'mobile', 'sécurité', 'security', 'réseau', 'network', 'système', 'system', 'admin',
+                                 'integration', 'intégration', 'bi ', 'business intelligence']
                 if any(kw in potential_title.lower() for kw in title_keywords):
                     metadata['specialty'] = potential_title
                     found_spec = True
                     break
 
-    # Heuristic 2: Predefined list of specialties (Fallback)
+    # Heuristic 2: Predefined list of specialties (Fallback) - ordered from most specific to least
     if not found_spec:
         specialties = [
-            'Data Scientist', 'Data Analyst', 'Data Engineer', 'Machine Learning Engineer',
-            'Développeur Fullstack', 'Fullstack Developer', 'Full Stack Developer',
+            # Most specific compound titles first
+            'Data Integration Engineer', 'Machine Learning Engineer', 
+            'Data Scientist', 'Data Analyst', 'Data Engineer',
+            'Business Intelligence', 'BI Developer', 'BI Analyst',
+            'Site Reliability Engineer', 'Full Stack Developer', 'Fullstack Developer',
+            'Développeur Fullstack', 'Développeur Full Stack',
+            'Ingénieur Data', 'Ingénieur Cloud', 'Ingénieur DevOps', 'Ingénieur Système',
+            'Ingénieur Réseau', 'Ingénieur Sécurité', 'Ingénieur Logiciel',
+            'Cloud Engineer', 'Cloud Architect', 'Security Engineer',
             'Développeur Backend', 'Backend Developer', 'Développeur Frontend', 'Frontend Developer',
             'Développeur Mobile', 'iOS Developer', 'Android Developer',
-            'Ingénieur Cloud', 'Cloud Engineer', 'DevOps', 'SysOps', 'Site Reliability Engineer',
-            'Développeur', 'Ingénieur', 'Designer', 'UX/UI', 'Chef de projet', 'Project Manager', 
-            'Consultant', 'Architecte', 'Manager', 'Analyste', 'Administrateur', 'Technicien', 
+            'Chef de projet', 'Project Manager', 'Product Manager', 'Scrum Master',
+            'UX Designer', 'UI Designer', 'UX/UI Designer', 'UX/UI',
+            # Then generic single-word titles last
+            'DevOps', 'SysOps',
+            'Développeur', 'Ingénieur', 'Designer', 'Consultant', 'Architecte', 
+            'Manager', 'Analyste', 'Administrateur', 'Technicien', 
             'Commercial', 'Comptable', 'RH', 'Marketing'
         ]
         
-        header_text = text_lower[:800]
+        # First search in the header/top of CV (more likely to be THE specialty)
+        header_text = text_lower[:500]
         for spec in specialties:
             if spec.lower() in header_text:
                 metadata['specialty'] = spec
                 found_spec = True
                 break
         
+        # Then search in rest of document
         if not found_spec:
             for spec in specialties:
                 if spec.lower() in text_lower:
