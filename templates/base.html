@@ -152,6 +152,10 @@
                         class="nav-link px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 {% if request.endpoint == 'search' %}text-white bg-white/10 shadow-lg shadow-white/5{% else %}text-surface-400 hover:text-white hover:bg-white/5{% endif %}">
                         Rechercher
                     </a>
+                    <a href="{{ url_for('linkedin_search') }}"
+                        class="nav-link px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 {% if request.endpoint == 'linkedin_search' %}text-white bg-white/10 shadow-lg shadow-white/5{% else %}text-surface-400 hover:text-white hover:bg-white/5{% endif %}">
+                        LinkedIn
+                    </a>
                     <a href="{{ url_for('dashboard') }}"
                         class="nav-link px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 {% if request.endpoint == 'dashboard' %}text-white bg-white/10 shadow-lg shadow-white/5{% else %}text-surface-400 hover:text-white hover:bg-white/5{% endif %}">
                         Dashboard
@@ -198,6 +202,10 @@
                 <a href="{{ url_for('search') }}"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-surface-300 hover:text-white hover:bg-white/5 transition-all {% if request.endpoint == 'search' %}text-white bg-white/10{% endif %}">
                     Rechercher
+                </a>
+                <a href="{{ url_for('linkedin_search') }}"
+                    class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-surface-300 hover:text-white hover:bg-white/5 transition-all {% if request.endpoint == 'linkedin_search' %}text-white bg-white/10{% endif %}">
+                    LinkedIn
                 </a>
                 <a href="{{ url_for('dashboard') }}"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-surface-300 hover:text-white hover:bg-white/5 transition-all {% if request.endpoint == 'dashboard' %}text-white bg-white/10{% endif %}">

@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+
+{% block title %}Recherche LinkedIn — CVManager{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-12">
+    <!-- Header -->
+    <div class="mb-10 text-center">
+        <div
+            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-semibold text-blue-300 mb-6">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+            </svg>
+            Sourcing LinkedIn
+        </div>
+        <h1 class="text-4xl font-display font-extrabold text-white mb-4">Rechercher des Profils</h1>
+        <p class="text-surface-400 max-w-2xl mx-auto">Trouvez des candidats qualifiés sur LinkedIn grâce à une recherche
+            par mots-clés optimisée.</p>
+    </div>
+
+    <!-- Search Form -->
+    <div class="relative group mb-8">
+        <div
+            class="absolute -inset-1 bg-gradient-to-r from-blue-500 to-brand-500 rounded-[2rem] blur opacity-10 group-hover:opacity-20 transition duration-1000">
+        </div>
+        <div class="relative bg-surface-900 border border-white/5 rounded-[2rem] p-8">
+            <form id="linkedin-search-form" onsubmit="performSearch(event)">
+                <!-- Job Title / Keywords -->
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-surface-400 uppercase tracking-wider mb-3">Mots-clés /
+                        Titre du poste</label>
+                    <div class="relative">
+                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="keywords" name="keywords" required
+                            placeholder="Ex: Data Engineer, DevOps, Développeur Python..."
+                            class="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 focus:border-blue-500/50 rounded-2xl text-white placeholder-surface-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                            value="{{ keywords or '' }}">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Location -->
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-surface-400 uppercase tracking-wider mb-3">Localisation</label>
+                        <div class="relative">
+                            <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <input type="text" id="location" name="location" placeholder="Ex: Tunisie, France, Paris..."
+                                class="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 focus:border-blue-500/50 rounded-2xl text-white placeholder-surface-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                value="{{ location or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Skills -->
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-surface-400 uppercase tracking-wider mb-3">Compétences
+                            spécifiques</label>
+                        <div class="relative">
+                            <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            <input type="text" id="skills" name="skills" placeholder="Ex: Python, AWS, Docker..."
+                                class="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 focus:border-blue-500/50 rounded-2xl text-white placeholder-surface-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                value="{{ skills or '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Suggestions -->
+                <div class="mb-8">
+                    <label class="block text-xs font-bold text-surface-400 uppercase tracking-wider mb-3">Suggestions
+                        rapides</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="addKeyword('Data Engineer')"
+                            class="keyword-chip px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-surface-300 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30 transition-all">Data
+                            Engineer</button>
+                        <button type="button" onclick="addKeyword('DevOps')"
+                            class="keyword-chip px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-surface-300 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30 transition-all">DevOps</button>
+                        <button type="button" onclick="addKeyword('Développeur Fullstack')"
+                            class="keyword-chip px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-surface-300 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30 transition-all">Développeur
+                            Fullstack</button>
+                        <button type="button" onclick="addKeyword('Cybersécurité')"
+                            class="keyword-chip px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-surface-300 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30 transition-all">Cybersécurité</button>
+                        <button type="button" onclick="addKeyword('Cloud Architect')"
+                            class="keyword-chip px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-surface-300 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30 transition-all">Cloud
+                            Architect</button>
+                        <button type="button" onclick="addKeyword('Machine Learning')"
+                            class="keyword-chip px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-surface-300 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30 transition-all">Machine
+                            Learning</button>
+                        <button type="button" onclick="addKeyword('Chef de projet')"
+                            class="keyword-chip px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-surface-300 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30 transition-all">Chef
+                            de projet</button>
+                        <button type="button" onclick="addKeyword('Scrum Master')"
+                            class="keyword-chip px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-surface-300 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30 transition-all">Scrum
+                            Master</button>
+                    </div>
+                </div>
+
+                <!-- Search Button -->
+                <button type="submit"
+                    class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-3 group">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Lancer la recherche
+                    <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Results Cards -->
+    <div id="search-results" class="hidden space-y-4 animate-fade-in">
+        <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            Liens de recherche générés
+        </h2>
+
+        <!-- Google Search Link -->
+        <a id="google-link" href="#" target="_blank" rel="noopener noreferrer"
+            class="group block p-6 rounded-2xl bg-surface-900 border border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/[0.03] transition-all duration-300">
+            <div class="flex items-center gap-5">
+                <div
+                    class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
+                        <path
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-white mb-1 group-hover:text-emerald-300 transition-colors">Recherche
+                        Google (X-Ray)</h3>
+                    <p id="google-query-preview" class="text-sm text-surface-400 truncate"></p>
+                </div>
+                <svg class="w-5 h-5 text-surface-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all flex-shrink-0"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+            </div>
+        </a>
+
+        <!-- LinkedIn Direct Link -->
+        <a id="linkedin-link" href="#" target="_blank" rel="noopener noreferrer"
+            class="group block p-6 rounded-2xl bg-surface-900 border border-white/5 hover:border-blue-500/30 hover:bg-blue-500/[0.03] transition-all duration-300">
+            <div class="flex items-center gap-5">
+                <div
+                    class="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">Recherche LinkedIn
+                        directe</h3>
+                    <p id="linkedin-query-preview" class="text-sm text-surface-400 truncate"></p>
+                </div>
+                <svg class="w-5 h-5 text-surface-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all flex-shrink-0"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+            </div>
+        </a>
+
+        <!-- Bing Search Link -->
+        <a id="bing-link" href="#" target="_blank" rel="noopener noreferrer"
+            class="group block p-6 rounded-2xl bg-surface-900 border border-white/5 hover:border-cyan-500/30 hover:bg-cyan-500/[0.03] transition-all duration-300">
+            <div class="flex items-center gap-5">
+                <div
+                    class="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-white mb-1 group-hover:text-cyan-300 transition-colors">Recherche Bing
+                        (X-Ray)</h3>
+                    <p id="bing-query-preview" class="text-sm text-surface-400 truncate"></p>
+                </div>
+                <svg class="w-5 h-5 text-surface-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all flex-shrink-0"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+            </div>
+        </a>
+    </div>
+
+    <!-- Tips Section -->
+    <div class="mt-12 p-8 rounded-[2rem] bg-surface-900/50 border border-white/5">
+        <h2 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            Conseils de recherche
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-blue-300">🎯 Soyez précis</h3>
+                <p class="text-xs text-surface-400 leading-relaxed">Utilisez des titres de poste spécifiques plutôt que
+                    génériques. "Data Engineer Python" donnera de meilleurs résultats que "Ingénieur".</p>
+            </div>
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-emerald-300">📍 Ajoutez la localisation</h3>
+                <p class="text-xs text-surface-400 leading-relaxed">Précisez la ville ou le pays pour cibler des
+                    candidats dans une zone géographique pertinente.</p>
+            </div>
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-amber-300">⚡ Combinez les compétences</h3>
+                <p class="text-xs text-surface-400 leading-relaxed">Ajoutez des technologies clés (AWS, Docker, Python)
+                    pour filtrer les profils les plus pertinents.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function addKeyword(keyword) {
+        const input = document.getElementById('keywords');
+        if (input.value && !input.value.includes(keyword)) {
+            input.value += ', ' + keyword;
+        } else if (!input.value) {
+            input.value = keyword;
+        }
+        // Visual feedback
+        input.classList.add('ring-2', 'ring-blue-500/40');
+        setTimeout(() => input.classList.remove('ring-2', 'ring-blue-500/40'), 500);
+    }
+
+    function performSearch(e) {
+        e.preventDefault();
+
+        const keywords = document.getElementById('keywords').value.trim();
+        const location = document.getElementById('location').value.trim();
+        const skills = document.getElementById('skills').value.trim();
+
+        if (!keywords) return;
+
+        // Build the search query
+        let searchParts = [keywords];
+        if (skills) searchParts.push(skills);
+        if (location) searchParts.push(location);
+
+        const fullQuery = searchParts.join(' ');
+
+        // Google X-Ray search (most effective for LinkedIn sourcing)
+        const googleQuery = `site:linkedin.com/in/ "${keywords}"${location ? ' "' + location + '"' : ''}${skills ? ' ' + skills : ''}`;
+        const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`;
+
+        // LinkedIn search
+        const linkedinQuery = fullQuery;
+        const linkedinUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(linkedinQuery)}`;
+
+        // Bing X-Ray search
+        const bingQuery = `site:linkedin.com/in/ "${keywords}"${location ? ' "' + location + '"' : ''}${skills ? ' ' + skills : ''}`;
+        const bingUrl = `https://www.bing.com/search?q=${encodeURIComponent(bingQuery)}`;
+
+        // Update links
+        document.getElementById('google-link').href = googleUrl;
+        document.getElementById('google-query-preview').textContent = googleQuery;
+
+        document.getElementById('linkedin-link').href = linkedinUrl;
+        document.getElementById('linkedin-query-preview').textContent = linkedinQuery;
+
+        document.getElementById('bing-link').href = bingUrl;
+        document.getElementById('bing-query-preview').textContent = bingQuery;
+
+        // Show results
+        const results = document.getElementById('search-results');
+        results.classList.remove('hidden');
+        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+</script>
+{% endblock %}

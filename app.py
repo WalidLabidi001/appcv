@@ -647,6 +647,13 @@ def search():
     )
 
 
+@app.route('/linkedin-search')
+@login_required
+def linkedin_search():
+    """Search LinkedIn profiles by keywords."""
+    return render_template('linkedin_search.html')
+
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
